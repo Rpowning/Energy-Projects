@@ -3,8 +3,7 @@ Methanol Price Estimator
 A small end-to-end project I built to teach myself how commodity price prediction actually works, using methanol as the case study.
 
 The .ipynb files are where the actual work happens. These are Jupyter notebooks — Python code that loads real data, engineers features, trains a LinearRegression model, and evaluates it. 
-This is the only place any real computation, model fitting, or data pulling occurs. Methanol_Price_Prediction.ipynb builds the pipeline on synthetic data; Methanol_Price_Prediction_Real_Data.ipynb 
-swaps in real pulled data from FRED and Methanex and adds lagged price features.
+This is the only place any real computation, model fitting, or data pulling occurs. 
 
 The .html file is a static readout of the trained model — it doesn't compute anything new. 
 Once the notebook finishes training, I copied the model's learned coefficients, intercept, and scaler values out of the notebook and hardcoded them into this file's JavaScript. 
