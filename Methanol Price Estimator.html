@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Methanol Price Estimator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-void:#12151a;
+    --bg-panel:#181c23;
+    --bg-raised:#20252e;
+    --border:#2a2f3a;
+    --amber:#e8a33d;
+    --amber-dim:#8a6528;
+    --steel:#5b87a6;
+    --steel-dim:#33495a;
+    --text-primary:#e8eaed;
+    --text-muted:#8a94a3;
+    --text-faint:#565d6b;
+    --mono:'IBM Plex Mono', ui-monospace, monospace;
+    --sans:'IBM Plex Sans', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg-void);
+    color:var(--text-primary);
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:1080px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+  }
+  .masthead{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    border-bottom:1px solid var(--border);
+    padding-bottom:16px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .masthead h1{
+    font-size:19px;
+    font-weight:600;
+    margin:0;
+    letter-spacing:0.01em;
+  }
+  .masthead .ticker{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-faint);
+  }
+  .disclaimer{
+    font-size:12.5px;
+    color:var(--text-muted);
+    line-height:1.55;
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-left:2px solid var(--steel);
+    padding:10px 14px;
+    margin-bottom:14px;
+  }
+  .disclaimer.finding{
+    border-left:2px solid var(--amber-dim);
+    margin-bottom:26px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1.3fr;
+    gap:0;
+    border:1px solid var(--border);
+  }
+  @media (max-width:760px){
+    .grid{grid-template-columns:1fr;}
+  }
+  .panel{
+    background:var(--bg-panel);
+    padding:22px 24px;
+  }
+  .panel + .panel{
+    border-left:1px solid var(--border);
+  }
+  @media (max-width:760px){
+    .panel + .panel{border-left:none; border-top:1px solid var(--border);}
+  }
+  .panel-label{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.06em;
+    color:var(--text-faint);
+    margin-bottom:14px;
+  }
+  .subgroup-label{
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:0.05em;
+    color:var(--steel);
+    margin:20px 0 12px;
+    padding-top:14px;
+    border-top:1px solid var(--border);
+  }
+  .subgroup-label:first-of-type{
+    margin-top:0;
+    padding-top:0;
+    border-top:none;
+  }
+  .field{
+    margin-bottom:20px;
+  }
+  .field-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:6px;
+  }
+  .field-name{
+    font-size:13px;
+    color:var(--text-primary);
+  }
+  .field-sub{
+    font-size:11px;
+    color:var(--text-faint);
+    display:block;
+    margin-top:1px;
+  }
+  .field-value{
+    font-family:var(--mono);
+    font-size:13.5px;
+    color:var(--amber);
+    font-weight:500;
+  }
+  input[type=range]{
+    width:100%;
+    height:2px;
+    background:var(--border);
+    -webkit-appearance:none;
+    appearance:none;
+    outline:none;
+    margin:8px 0 2px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    appearance:none;
+    width:13px;
+    height:13px;
+    border-radius:50%;
+    background:var(--amber);
+    cursor:pointer;
+    border:2px solid var(--bg-panel);
+    box-shadow:0 0 0 1px var(--amber-dim);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:13px;
+    height:13px;
+    border-radius:50%;
+    background:var(--amber);
+    cursor:pointer;
+    border:2px solid var(--bg-panel);
+    box-shadow:0 0 0 1px var(--amber-dim);
+  }
+  input[type=range].lag-slider::-webkit-slider-thumb{
+    background:var(--steel);
+    box-shadow:0 0 0 1px var(--steel-dim);
+  }
+  input[type=range].lag-slider::-moz-range-thumb{
+    background:var(--steel);
+    box-shadow:0 0 0 1px var(--steel-dim);
+  }
+  .field.lag .field-value{ color:var(--steel); }
+  .range-caps{
+    display:flex;
+    justify-content:space-between;
+    font-family:var(--mono);
+    font-size:10px;
+    color:var(--text-faint);
+  }
+  select{
+    width:100%;
+    background:var(--bg-raised);
+    color:var(--text-primary);
+    border:1px solid var(--border);
+    padding:9px 10px;
+    font-family:var(--sans);
+    font-size:13.5px;
+    border-radius:2px;
+    cursor:pointer;
+  }
+  select:focus{
+    outline:1px solid var(--amber-dim);
+  }
+  .feedstock-note{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-faint);
+    margin-top:8px;
+    line-height:1.5;
+  }
+  .feedstock-note b{ color:var(--steel); font-weight:500; }
+
+  /* --- output panel --- */
+  .readout{
+    text-align:left;
+    padding-bottom:22px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:20px;
+  }
+  .readout-label{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.06em;
+    color:var(--text-faint);
+    margin-bottom:10px;
+  }
+  .readout-value{
+    font-family:var(--mono);
+    font-size:52px;
+    font-weight:600;
+    color:var(--amber);
+    line-height:1;
+    letter-spacing:-0.01em;
+  }
+  .readout-unit{
+    font-family:var(--mono);
+    font-size:14px;
+    color:var(--text-muted);
+    margin-left:6px;
+  }
+  .readout-meta{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--text-faint);
+    margin-top:10px;
+  }
+
+  .contrib-title{
+    font-size:12.5px;
+    color:var(--text-muted);
+    margin-bottom:14px;
+  }
+  .contrib-row{
+    margin-bottom:11px;
+  }
+  .contrib-head{
+    display:flex;
+    justify-content:space-between;
+    font-family:var(--mono);
+    font-size:11.5px;
+    margin-bottom:4px;
+  }
+  .contrib-head .name{ color:var(--text-muted); }
+  .contrib-head .amt{ color:var(--text-primary); }
+  .contrib-bar-track{
+    position:relative;
+    height:6px;
+    background:var(--bg-raised);
+    border:1px solid var(--border);
+  }
+  .contrib-bar-mid{
+    position:absolute;
+    left:50%;
+    top:-2px;
+    bottom:-2px;
+    width:1px;
+    background:var(--text-faint);
+  }
+  .contrib-bar-fill{
+    position:absolute;
+    top:0;
+    bottom:0;
+    background:var(--amber);
+  }
+  .contrib-bar-fill.neg{
+    background:var(--steel);
+  }
+  .contrib-bar-fill.lagbar{
+    background:var(--steel);
+  }
+  .contrib-bar-fill.lagbar.neg{
+    background:var(--amber-dim);
+  }
+
+  .baseline-note{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-faint);
+    margin-top:18px;
+    padding-top:14px;
+    border-top:1px solid var(--border);
+    line-height:1.6;
+  }
+
+  /* --- process writeup --- */
+  .process{
+    margin-top:40px;
+    border:1px solid var(--border);
+    background:var(--bg-panel);
+    padding:22px 24px 8px;
+  }
+  .process-label{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.06em;
+    color:var(--text-faint);
+    margin-bottom:20px;
+  }
+  .process-step{
+    display:grid;
+    grid-template-columns:40px 1fr;
+    gap:16px;
+    padding-bottom:20px;
+    margin-bottom:20px;
+    border-bottom:1px solid var(--border);
+  }
+  .process-step:last-child{
+    border-bottom:none;
+    margin-bottom:0;
+  }
+  .process-num{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--steel);
+    padding-top:1px;
+  }
+  .process-title{
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--text-primary);
+    margin-bottom:6px;
+  }
+  .process-text{
+    font-size:12.5px;
+    color:var(--text-muted);
+    line-height:1.65;
+    max-width:640px;
+  }
+  .process-text b{
+    color:var(--text-primary);
+    font-weight:600;
+  }
+  .process-text code, .disclaimer code, .feedstock-note code, .field-explain code{
+    font-family:var(--mono);
+    font-size:11.5px;
+    background:var(--bg-raised);
+    border:1px solid var(--border);
+    padding:1px 5px;
+    border-radius:2px;
+    color:var(--amber);
+  }
+  .field-explain{
+    font-size:11.5px;
+    color:var(--text-faint);
+    line-height:1.55;
+    margin-top:7px;
+  }
+  .field-quantity{
+    font-family:var(--mono);
+    font-size:10.5px;
+    color:var(--steel);
+    line-height:1.5;
+    margin-top:6px;
+  }
+  .field-explain .def{
+    color:var(--text-muted);
+    display:block;
+    margin-bottom:5px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Methanol Price Estimator</h1>
+    <div class="ticker">R² 0.833 · MAE $29.96/MT · built by Reid Powning</div>
+  </div>
+
+  <div class="disclaimer">
+    I built this to teach myself how methanol prices actually move, using real pulled data — FRED
+    for natural gas, crude oil, the dollar index, housing starts, China industrial production, and
+    gasoline, merged with Methanex's historical posted price by region, plus price from 1, 3, and
+    12 months back as extra features. The model landed at R² 0.833 and about $30/MT average error
+    on months it hadn't seen during training — I'm pretty happy with that for a first pass with a
+    plain linear model.
+  </div>
+
+  <div class="disclaimer finding">
+    <b style="color:var(--text-primary)">Thing I found while digging into this:</b> the coal-vs-natural-gas
+    feedstock feature came out to a coefficient of exactly 0. At first I thought I'd broken something, but
+    it turns out <code>FeedstockType</code> is fully determined by <code>Region</code> in my data — China
+    always maps to coal, everywhere else maps to natural gas — so the model literally can't tell the two
+    apart and folded that whole effect into the Region numbers instead. Kept feedstock visible below since
+    it's still useful context, just know it isn't doing anything to the math on its own.
+  </div>
+
+  <div class="grid">
+
+    <div class="panel">
+      <div class="panel-label">INPUTS</div>
+
+      <div class="subgroup-label">MACRO / DEMAND</div>
+
+      <div class="field">
+        <div class="field-row">
+          <span class="field-name">Region</span>
+        </div>
+        <select id="region">
+          <option value="North America">North America</option>
+          <option value="Europe">Europe</option>
+          <option value="Asia Pacific">Asia Pacific</option>
+          <option value="China">China</option>
+        </select>
+        <div class="feedstock-note">Feedstock: <b id="feedstockLabel">Natural Gas</b> — shown for context only, see the note up top about why it doesn't move the price on its own.</div>
+        <div class="field-explain">Methanol trades at a different price depending on the region, so this
+        just tells the model which region's price track I'm estimating. Doesn't touch any of the other
+        numbers below.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-row">
+          <div>
+            <span class="field-name">Natural gas price</span>
+            <span class="field-sub">Henry Hub, $/MMBtu</span>
+          </div>
+          <span class="field-value" id="val-NaturalGasPrice">4.16</span>
+        </div>
+        <input type="range" id="NaturalGasPrice" min="1.63" max="12.69" step="0.01" value="4.16">
+        <div class="range-caps"><span>1.63</span><span>12.69</span></div>
+        <div class="field-explain">The market price of natural gas at Henry Hub, a pricing point in Louisiana
+        used as the standard US benchmark, in dollars per million BTU (a unit of energy content). I included
+        this because natural gas is the actual raw ingredient in most methanol production — when gas costs
+        more to buy, it costs more to make methanol, plain and simple.</div>
+        <div class="field-quantity">Typical range: roughly $2-4. Spiked above $8-10 during real supply
+        shocks (2008, 2022).</div>
+      </div>
+
+      <div class="field">
+        <div class="field-row">
+          <div>
+            <span class="field-name">Crude oil price</span>
+            <span class="field-sub">WTI, $/bbl</span>
+          </div>
+          <span class="field-value" id="val-CrudeOilPrice">73.30</span>
+        </div>
+        <input type="range" id="CrudeOilPrice" min="16.55" max="133.88" step="0.1" value="73.30">
+        <div class="range-caps"><span>16.55</span><span>133.88</span></div>
+        <div class="field-explain">The price of a barrel of West Texas Intermediate crude, the standard US
+        oil benchmark. Methanol isn't made from oil directly, so this one's more indirect — it's more of a
+        mood indicator for energy and petrochemical markets broadly, and it affects the shipping and
+        transportation costs that matter for a commodity that has to physically move by ship or rail.</div>
+        <div class="field-quantity">Typical range: roughly $60-90/bbl. Fell below $20 in the 2020 COVID
+        crash, spiked past $120 in 2022.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-row">
+          <div>
+            <span class="field-name">USD index</span>
+            <span class="field-sub">trade-weighted, broad</span>
+          </div>
+          <span class="field-value" id="val-USDIndex">104.30</span>
+        </div>
+        <input type="range" id="USDIndex" min="86.32" max="127.48" step="0.05" value="104.30">
+        <div class="range-caps"><span>86.32</span><span>127.48</span></div>
+        <div class="field-explain">A single number tracking how strong the US dollar is against a basket of
+        other major currencies (euro, yen, yuan, etc.), instead of comparing it to just one currency at a
+        time. Higher = dollar getting stronger. Methanol trades in dollars everywhere, even in countries that
+        don't use dollars day to day, so a stronger dollar effectively makes methanol pricier for a foreign
+        buyer even if the dollar price hasn't moved — which can soften demand and pull price down.</div>
+        <div class="field-quantity">Typical range: roughly 90-115 on this kind of index. Below 90 signals a
+        notably weak dollar, above 115 a notably strong one.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-row">
+          <div>
+            <span class="field-name">Housing starts</span>
+            <span class="field-sub">thousands of units — formaldehyde proxy</span>
+          </div>
+          <span class="field-value" id="val-HousingStarts">1129</span>
+        </div>
+        <input type="range" id="HousingStarts" min="478" max="2119" step="1" value="1129">
+        <div class="range-caps"><span>478</span><span>2119</span></div>
+        <div class="field-explain">The number of new home construction projects that broke ground that
+        month in the US (specifically, when a builder starts digging the foundation), tracked monthly by
+        the Census Bureau and reported as an annualized figure in thousands of units. It's a proxy here, not
+        a direct cause — the real link is formaldehyde. Formaldehyde-based resins go into plywood,
+        particleboard, and insulation, all heavily used in home construction, and formaldehyde is one of the
+        biggest single end-uses of methanol. Couldn't find good direct formaldehyde demand data, so this was
+        the closest stand-in.</div>
+        <div class="field-quantity">Typical range: roughly 1.0-1.5 million (annualized) in a healthy market.
+        Dropped below 500k during the 2009 housing bust, topped 1.6-2M in strong building years.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-row">
+          <div>
+            <span class="field-name">China industrial production</span>
+            <span class="field-sub">index, YoY-style, OECD/FRED</span>
+          </div>
+          <span class="field-value" id="val-ChinaIndustrialProduction">109.1</span>
+        </div>
+        <input type="range" id="ChinaIndustrialProduction" min="86.5" max="120.1" step="0.1" value="109.1">
+        <div class="range-caps"><span>86.5</span><span>120.1</span></div>
+        <div class="field-explain">An index measuring how much output China's factories, mines, and
+        utilities are producing in a given month, relative to a baseline period — up means Chinese industry
+        is producing more than before, down means less. China's the single biggest methanol consumer in the
+        world (used there in plastics, fuel blending, construction materials, and more), so I wanted
+        something that tracks their industrial demand overall rather than trying to isolate methanol
+        specifically.</div>
+        <div class="field-quantity">Typical range on this kind of index: roughly 95-115. Below 90 signals a
+        real slowdown, above 115 unusually strong output.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-row">
+          <div>
+            <span class="field-name">Gasoline price</span>
+            <span class="field-sub">$/gal — MTBE/blending proxy</span>
+          </div>
+          <span class="field-value" id="val-GasolinePrice">2.97</span>
+        </div>
+        <input type="range" id="GasolinePrice" min="1.69" max="4.93" step="0.01" value="2.97">
+        <div class="range-caps"><span>1.69</span><span>4.93</span></div>
+        <div class="field-explain">The retail price of a gallon of regular gasoline in the US. Methanol
+        sometimes gets blended into gasoline directly or converted into additives like MTBE (used to boost
+        octane), so gas prices are a loose proxy for that slice of demand — weaker link than natural gas, but
+        a real one. Used it because it was the closest thing I could pull easily.</div>
+        <div class="field-quantity">Typical range: roughly $2.50-3.50/gal in the US in normal conditions.</div>
+      </div>
+
+      <div class="subgroup-label">RECENT METHANOL PRICE (LAGS)</div>
+
+      <div class="field lag">
+        <div class="field-row">
+          <div>
+            <span class="field-name">Price, 1 month ago</span>
+            <span class="field-sub">$/MT — the strongest single predictor</span>
+          </div>
+          <span class="field-value" id="val-MethanolPrice_lag_1">387</span>
+        </div>
+        <input type="range" class="lag-slider" id="MethanolPrice_lag_1" min="100" max="831.5" step="1" value="387">
+        <div class="range-caps"><span>100</span><span>832</span></div>
+        <div class="field-explain">Not an external indicator — this is just methanol's own price from last
+        month. The idea: commodity prices tend to be "sticky," meaning whatever the price was last month is
+        usually a decent starting guess for this month, since markets don't reprice from scratch every day.
+        Added this after my first pass with just macro data wasn't picking up much signal, and it turned out
+        to be an understatement — this ended up the single biggest driver in the whole model, bigger than
+        everything else combined.</div>
+        <div class="field-quantity">Typical range: roughly $250-450/MT in normal markets, spiking above
+        $600/MT when supply gets tight.</div>
+      </div>
+
+      <div class="field lag">
+        <div class="field-row">
+          <div>
+            <span class="field-name">Price, 3 months ago</span>
+            <span class="field-sub">$/MT</span>
+          </div>
+          <span class="field-value" id="val-MethanolPrice_lag_3">382</span>
+        </div>
+        <input type="range" class="lag-slider" id="MethanolPrice_lag_3" min="100" max="831.5" step="1" value="382">
+        <div class="range-caps"><span>100</span><span>832</span></div>
+        <div class="field-explain">Same idea as the 1-month lag, just further back — wanted a slightly
+        longer-view anchor to see if the model could pick up on a trend rather than just the most recent
+        print.</div>
+        <div class="field-quantity">Typical range: roughly $250-450/MT.</div>
+      </div>
+
+      <div class="field lag">
+        <div class="field-row">
+          <div>
+            <span class="field-name">Price, 12 months ago</span>
+            <span class="field-sub">$/MT</span>
+          </div>
+          <span class="field-value" id="val-MethanolPrice_lag_12">356</span>
+        </div>
+        <input type="range" class="lag-slider" id="MethanolPrice_lag_12" min="100" max="831.5" step="1" value="356">
+        <div class="range-caps"><span>100</span><span>832</span></div>
+        <div class="field-explain">Threw this in mostly out of curiosity, to see if there's a full-year
+        cycle effect worth capturing. Its coefficient ended up pretty small compared to the 1-month lag,
+        which was itself an interesting result — recent price matters a lot more than price a year ago.</div>
+        <div class="field-quantity">Typical range: roughly $250-450/MT.</div>
+      </div>
+
+
+
+
+      <div class="feedstock-note">Set the lag sliders to floor at $100 instead of the data's literal $0
+      minimum — that $0 was just an artifact from the first 12 months of my dataset not having enough
+      history yet to calculate a 12-month lag, not an actual market price.</div>
+
+    </div>
+
+    <div class="panel">
+      <div class="readout">
+        <div class="readout-label">ESTIMATED METHANOL PRICE</div>
+        <div><span class="readout-value" id="output">—</span><span class="readout-unit">$/MT</span></div>
+        <div class="readout-meta" id="rangeNote"></div>
+      </div>
+
+      <div class="contrib-title">What's driving this estimate</div>
+      <div id="contribList"></div>
+
+      <div class="baseline-note">
+        Bars show each input's push on price, in $/MT, relative to the model's intercept. Amber = macro/demand
+        input pushing price up (steel = down). Steel = a lag price pushing the estimate up toward that recent
+        level (amber-dim = pulling it down). Region shown as one combined bar; I left Feedstock out of the
+        bars since its coefficients are both 0 (see the note up top).
+      </div>
+    </div>
+
+  </div>
+
+  <div class="process">
+    <div class="process-label">HOW I BUILT THIS</div>
+
+    <div class="process-step">
+      <div class="process-num">01</div>
+      <div class="process-body">
+        <div class="process-title">Started with "what actually moves this price" instead of "what data can I find"</div>
+        <div class="process-text">I didn't want to just grab whatever columns were easy to pull, so I forced
+        myself to think through the mechanism first: split candidates into <b>cost-push</b> stuff (feedstock
+        and input costs — natural gas, crude oil, dollar strength) and <b>demand-pull</b> stuff (the
+        industries that actually consume methanol — housing starts as a formaldehyde proxy, China industrial
+        production, gasoline price as a blending proxy). That framing is what told me which real data series
+        to go find later.</div>
+      </div>
+    </div>
+
+    <div class="process-step">
+      <div class="process-num">02</div>
+      <div class="process-body">
+        <div class="process-title">Built the whole pipeline on made-up data first</div>
+        <div class="process-text">Before touching any real APIs, I generated a synthetic dataset with
+        realistic correlations baked in on purpose. That let me build and debug the whole pipeline — null
+        handling, one-hot encoding, scaling, train/test split, model fit — against data I knew would behave,
+        instead of fighting data-quality issues and modeling issues at the same time.</div>
+      </div>
+    </div>
+
+    <div class="process-step">
+      <div class="process-num">03</div>
+      <div class="process-body">
+        <div class="process-title">One-hot encoded the categorical columns</div>
+        <div class="process-text"><code>Region</code> (North America / Europe / Asia Pacific / China) and
+        <code>FeedstockType</code> (Natural Gas / Coal) don't have any natural order to them, so I ran each
+        through scikit-learn's <code>OneHotEncoder</code>: pulled the column into a list, wrapped it as a
+        list-of-lists since that's the 2D shape it wants, called <code>.fit()</code> to learn the categories,
+        then <code>.transform().toarray()</code> to get the 0/1 columns back and concatenated those onto my
+        features, dropping the original text columns.</div>
+      </div>
+    </div>
+
+    <div class="process-step">
+      <div class="process-num">04</div>
+      <div class="process-body">
+        <div class="process-title">Standard-scaled the numeric columns</div>
+        <div class="process-text">Ran every numeric feature (natural gas, crude oil, USD index, housing
+        starts, China industrial production, gasoline, and later the lag prices too) through
+        <code>StandardScaler</code> so each ends up with mean 0 and standard deviation 1. Without this, housing
+        starts — which sits in the thousands — would completely swamp something like natural gas price, which
+        is single digits, purely because of the units they're measured in, not because it's actually more
+        predictive. This is also the reason the dashboard's math below has to "un-scale" every slider value
+        using the exact same mean and scale from training, instead of just plugging raw numbers into the
+        coefficients.</div>
+      </div>
+    </div>
+
+    <div class="process-step">
+      <div class="process-num">05</div>
+      <div class="process-body">
+        <div class="process-title">Split the data by date, not randomly</div>
+        <div class="process-text">This is time-series data, not independent rows like individual house
+        sales, so a random shuffle split would let future months leak into training and make the model look
+        better than it actually is. Instead I sorted everything by date and trained on the earliest ~80% of
+        months, testing on the most recent ~20% — closer to how I'd actually use this: predicting forward
+        from what already happened.</div>
+      </div>
+    </div>
+
+    <div class="process-step">
+      <div class="process-num">06</div>
+      <div class="process-body">
+        <div class="process-title">Swapped in real data once the pipeline worked</div>
+        <div class="process-text">Pulled the feature data from FRED's API (natural gas, crude oil, USD index,
+        housing starts, China industrial production, gasoline — resampled to monthly with
+        <code>.resample("MS").mean()</code> so everything lines up on the same date index) and got the actual
+        methanol price from Methanex's historical posted price file. Had to melt that from wide format (one
+        column per region) into long format (one row per Region + Date) to get the same
+        <code>Region</code> column I'd already built the pipeline around.</div>
+      </div>
+    </div>
+
+    <div class="process-step">
+      <div class="process-num">07</div>
+      <div class="process-body">
+        <div class="process-title">Added lagged price as a feature</div>
+        <div class="process-text">My first pass with just macro features wasn't picking up as much as I
+        wanted, so I added <code>MethanolPrice</code> shifted back 1, 3, and 12 months as extra columns.
+        Figured recent price would probably matter a lot for a commodity like this, and it turned out to be
+        an understatement — the 1-month lag ended up with by far the biggest coefficient in the whole model.</div>
+      </div>
+    </div>
+
+    <div class="process-step">
+      <div class="process-num">08</div>
+      <div class="process-body">
+        <div class="process-title">Kept the model itself simple and read into the coefficients</div>
+        <div class="process-text">I went with plain <code>LinearRegression</code> instead of something
+        fancier, since what I wanted out of this was an interpretable baseline I could actually understand —
+        not squeeze out every last point of accuracy. That choice is what let me catch the multicollinearity
+        between <code>Region</code> and <code>FeedstockType</code> mentioned up top; a more of a black-box
+        model would've just hidden that.</div>
+      </div>
+    </div>
+
+    <div class="process-step">
+      <div class="process-num">09</div>
+      <div class="process-body">
+        <div class="process-title">Ported the trained model over to build this dashboard</div>
+        <div class="process-text">Everything above happens once, in Python, inside my notebook. This page
+        doesn't run Python or call scikit-learn at all — it's a plain HTML/JS file where I copied the
+        trained model's <code>coef_</code>, <code>intercept_</code>, and the <code>StandardScaler</code>'s
+        <code>mean_</code>/<code>scale_</code> straight out of the notebook and hardcoded them into the
+        <code>MODEL</code> and <code>SCALER</code> objects in the script. Every time you move a slider, it's
+        rerunning the same scale → multiply-by-coefficient → sum → add-intercept math that
+        <code>model.predict()</code> does in Python — just in JavaScript, so it feels instant in a browser.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ---------------------------------------------------------------------
+// Coefficients, intercept, and scaler stats pulled directly from the
+// LinearRegression model trained in the REAL DATA notebook (FRED +
+// Methanex, with 1/3/12-month lag features). R²=0.833, MAE=$29.96/MT
+// on a chronological held-out test set (490 train / 123 test rows).
+// ---------------------------------------------------------------------
+const MODEL = {
+  intercept: 388.6033043790388,
+  coef: {
+    NaturalGasPrice: -8.152615501240694,
+    CrudeOilPrice: 37.954009968986156,
+    USDIndex: -2.980124431445077,
+    HousingStarts: 18.102200077404017,
+    ChinaIndustrialProduction: -4.250596196992532,
+    GasolinePrice: -17.773911997433736,
+    MethanolPrice_lag_1: 95.16195459184165,
+    MethanolPrice_lag_3: -16.586956497564486,
+    MethanolPrice_lag_12: -1.4724311831454902,
+    "Region_Asia Pacific": 3.749889883618989,
+    "Region_China": 3.552713678800501e-15,
+    "Region_Europe": -17.803247629442524,
+    "Region_North America": 14.053357745823542,
+    "Feedstock_Coal": 0.0,
+    "Feedstock_Natural Gas": 0.0
+  }
+};
+
+const SCALER = {
+  NaturalGasPrice:            { mean: 4.162289329583914,  scale: 2.0333738269823805 },
+  CrudeOilPrice:              { mean: 73.29783387788281,  scale: 22.279501406943094 },
+  USDIndex:                   { mean: 104.3023183766706,  scale: 11.751891203764695 },
+  HousingStarts:              { mean: 1129.3491027732464, scale: 366.8232375258111 },
+  ChinaIndustrialProduction:  { mean: 109.08172920065253, scale: 4.972917742743866 },
+  GasolinePrice:              { mean: 2.9721485318107668, scale: 0.6353266014770176 },
+  MethanolPrice_lag_1:        { mean: 387.4559347471452,  scale: 112.00293743518486 },
+  MethanolPrice_lag_3:        { mean: 382.2732267536705,  scale: 120.03342313547793 },
+  MethanolPrice_lag_12:       { mean: 356.11988254486135, scale: 147.0348485773659 }
+};
+
+const NUMERIC_FIELDS = [
+  "NaturalGasPrice","CrudeOilPrice","USDIndex","HousingStarts",
+  "ChinaIndustrialProduction","GasolinePrice",
+  "MethanolPrice_lag_1","MethanolPrice_lag_3","MethanolPrice_lag_12"
+];
+
+const LAG_FIELDS = ["MethanolPrice_lag_1","MethanolPrice_lag_3","MethanolPrice_lag_12"];
+
+const FIELD_LABELS = {
+  NaturalGasPrice: "Natural gas",
+  CrudeOilPrice: "Crude oil",
+  USDIndex: "USD index",
+  HousingStarts: "Housing starts",
+  ChinaIndustrialProduction: "China ind. production",
+  GasolinePrice: "Gasoline",
+  MethanolPrice_lag_1: "Price 1mo ago",
+  MethanolPrice_lag_3: "Price 3mo ago",
+  MethanolPrice_lag_12: "Price 12mo ago"
+};
+
+const DECIMALS = {
+  NaturalGasPrice: 2, CrudeOilPrice: 2, USDIndex: 2, HousingStarts: 0,
+  ChinaIndustrialProduction: 1, GasolinePrice: 2,
+  MethanolPrice_lag_1: 0, MethanolPrice_lag_3: 0, MethanolPrice_lag_12: 0
+};
+
+const REGION_FEEDSTOCK = {
+  "North America": "Natural Gas",
+  "Europe": "Natural Gas",
+  "Asia Pacific": "Natural Gas",
+  "China": "Coal"
+};
+
+function scaledValue(field, raw){
+  const s = SCALER[field];
+  return (raw - s.mean) / s.scale;
+}
+
+function computePrice(){
+  const region = document.getElementById("region").value;
+  const feedstock = REGION_FEEDSTOCK[region];
+  document.getElementById("feedstockLabel").textContent = feedstock;
+
+  let total = MODEL.intercept;
+  const contributions = [];
+
+  NUMERIC_FIELDS.forEach(field => {
+    const raw = parseFloat(document.getElementById(field).value);
+    const scaled = scaledValue(field, raw);
+    const contribution = MODEL.coef[field] * scaled;
+    total += contribution;
+    contributions.push({
+      label: FIELD_LABELS[field],
+      amount: contribution,
+      isLag: LAG_FIELDS.includes(field)
+    });
+  });
+
+  const regionCoef = MODEL.coef["Region_" + region] || 0;
+  total += regionCoef;
+  contributions.push({ label: region + " (region)", amount: regionCoef, isLag: false });
+
+  return { total, contributions };
+}
+
+function render(){
+  const { total, contributions } = computePrice();
+
+  NUMERIC_FIELDS.forEach(field => {
+    const raw = parseFloat(document.getElementById(field).value);
+    document.getElementById("val-" + field).textContent = raw.toFixed(DECIMALS[field]);
+  });
+
+  const floored = Math.max(total, 60);
+  document.getElementById("output").textContent = Math.round(floored).toLocaleString();
+
+  const note = document.getElementById("rangeNote");
+  note.textContent = (total < 60)
+    ? "Raw model output was below a realistic floor and has been capped for display."
+    : "";
+
+  const maxAbs = Math.max(...contributions.map(c => Math.abs(c.amount)), 1);
+  const list = document.getElementById("contribList");
+  list.innerHTML = "";
+
+  contributions.forEach(c => {
+    const row = document.createElement("div");
+    row.className = "contrib-row";
+
+    const head = document.createElement("div");
+    head.className = "contrib-head";
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = c.label;
+    const amt = document.createElement("span");
+    amt.className = "amt";
+    amt.textContent = (c.amount >= 0 ? "+" : "") + Math.round(c.amount) + " $/MT";
+    head.appendChild(name);
+    head.appendChild(amt);
+
+    const track = document.createElement("div");
+    track.className = "contrib-bar-track";
+    const mid = document.createElement("div");
+    mid.className = "contrib-bar-mid";
+    const fill = document.createElement("div");
+    let fillClass = "contrib-bar-fill";
+    if (c.isLag) fillClass += " lagbar";
+    if (c.amount < 0) fillClass += " neg";
+    fill.className = fillClass;
+    const pct = (Math.abs(c.amount) / maxAbs) * 50;
+    if (c.amount >= 0) {
+      fill.style.left = "50%";
+      fill.style.width = pct + "%";
+    } else {
+      fill.style.right = "50%";
+      fill.style.width = pct + "%";
+    }
+    track.appendChild(mid);
+    track.appendChild(fill);
+
+    row.appendChild(head);
+    row.appendChild(track);
+    list.appendChild(row);
+  });
+}
+
+document.getElementById("region").addEventListener("change", render);
+NUMERIC_FIELDS.forEach(field => {
+  document.getElementById(field).addEventListener("input", render);
+});
+
+render();
+</script>
+</body>
+</html>
